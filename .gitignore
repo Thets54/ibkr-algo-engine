@@ -1,0 +1,14 @@
+build*/
+.algo_cache/
+/strategies/
+/data/
+/config.json
+*.so
+*.dylib
+*.dll
+__pycache__/
+*.pyc
+compile_commands.json
+.vscode/
+.idea/
+.DS_Store

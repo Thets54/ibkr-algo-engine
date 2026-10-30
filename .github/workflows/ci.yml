@@ -1,0 +1,53 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            build_type: Release
+          - os: ubuntu-24.04
+            build_type: Debug
+            sanitize: "-fsanitize=address,undefined -fno-omit-frame-pointer"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+          pip install pybind11
+      - name: Configure
+        run: >
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DCMAKE_CXX_FLAGS="${{ matrix.sanitize }}"
+      - name: Build
+        run: cmake --build build
+      - name: Test
+        working-directory: build
+        env:
+          ASAN_OPTIONS: detect_leaks=0
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        run: |
+          if [ -n "${{ matrix.sanitize }}" ]; then
+            ctest --output-on-failure -j 4 -E "CppStrategy|CppTemplate"
+          else
+            ctest --output-on-failure -j 4
+          fi
+      - name: CLI smoke test
+        if: ${{ !matrix.sanitize }}
+        run: |
+          python3 tools/make_synthetic_data.py --out ci-data
+          ./build/algoengine backtest -s examples/strategies/sma_crossover.py --symbols SYNA,SYNB --data ci-data
+          ./build/algoengine backtest -s examples/strategies/donchian_breakout.cpp --symbols SYNC --data ci-data

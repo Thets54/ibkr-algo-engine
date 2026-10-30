@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Algo Engine</title>
+<style>
+:root {
+  --bg: #f6f7f9; --panel: #ffffff; --panel-2: #f1f3f6; --border: #e2e5ea;
+  --text: #15181d; --muted: #6a717c; --accent: #2457d6; --accent-ink: #ffffff;
+  --pos: #0f8a4f; --neg: #c8312b; --warn: #b26a00; --chart: #2457d6; --chart-fill: rgba(36,87,214,.10);
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e1116; --panel: #161a21; --panel-2: #1d222b; --border: #2a303b;
+    --text: #e7eaf0; --muted: #8b93a1; --accent: #5b8cff; --accent-ink: #0b0e13;
+    --pos: #3ccf8e; --neg: #ff6b62; --warn: #ffb547; --chart: #5b8cff; --chart-fill: rgba(91,140,255,.12);
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 var(--sans); }
+header { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--border);
+  background: var(--panel); position: sticky; top: 0; z-index: 5; flex-wrap: wrap; }
+header h1 { font-size: 16px; margin: 0; letter-spacing: .2px; }
+header .spacer { flex: 1; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px;
+  background: var(--panel-2); color: var(--muted); border: 1px solid var(--border); white-space: nowrap; }
+.pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.pill.ok .dot { background: var(--pos); } .pill.bad .dot { background: var(--neg); } .pill.busy .dot { background: var(--warn); }
+main { display: grid; grid-template-columns: 360px 1fr; gap: 16px; padding: 16px 20px; max-width: 1500px; margin: 0 auto; }
+main > section { min-width: 0; }
+@media (max-width: 900px) { main { grid-template-columns: 1fr; padding: 12px 16px; } }
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 16px; }
+.card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin: 0 0 10px; font-weight: 600;
+  display: flex; align-items: center; justify-content: space-between; }
+label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
+input, select, textarea { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--panel-2); color: var(--text); font: inherit; }
+textarea { font-family: var(--mono); font-size: 12.5px; resize: vertical; }
+button { font: inherit; border-radius: 8px; border: 1px solid var(--border); background: var(--panel-2); color: var(--text);
+  padding: 7px 12px; cursor: pointer; white-space: nowrap; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+button.danger { background: var(--neg); color: #fff; border-color: var(--neg); font-weight: 600; }
+button.small { padding: 3px 8px; font-size: 12px; }
+.row { display: flex; gap: 8px; align-items: center; }
+.row > * { flex: 1; }
+.row > button { flex: 0 0 auto; }
+#startBtn { flex: 1; }
+.seg { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; flex: 1; background: transparent; }
+.seg button.on { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.drop { border: 1.5px dashed var(--border); border-radius: 8px; padding: 14px; text-align: center; color: var(--muted);
+  cursor: pointer; transition: border-color .15s, background .15s; }
+.drop.over { border-color: var(--accent); background: var(--chart-fill); color: var(--text); }
+.list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; max-height: 240px; overflow: auto; }
+.item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; background: var(--panel-2); }
+.item .name { flex: 1; min-width: 0; font-family: var(--mono); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.badge { font-size: 10.5px; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border); color: var(--muted); text-transform: uppercase; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.chip { font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); cursor: pointer; background: var(--panel-2); }
+.chip.on { border-color: var(--accent); color: var(--accent); }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.kpi { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+.kpi .k { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+.kpi .v { font-size: 20px; font-weight: 600; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.pos { color: var(--pos); } .neg { color: var(--neg); } .muted { color: var(--muted); }
+canvas { width: 100%; height: 260px; display: block; }
+.progress { height: 4px; background: var(--panel-2); border-radius: 2px; overflow: hidden; margin-top: 8px; }
+.progress > div { height: 100%; background: var(--accent); width: 0; transition: width .2s; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin: -4px -14px 10px; padding: 0 14px; overflow-x: auto; }
+.tabs button { border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; padding: 8px 10px; color: var(--muted); }
+.tabs button.on { color: var(--text); border-bottom-color: var(--accent); }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 13px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+th { color: var(--muted); font-weight: 500; font-size: 12px; }
+td.n, th.n { text-align: right; }
+.tablewrap { max-height: 340px; overflow: auto; }
+.logs { font-family: var(--mono); font-size: 12px; max-height: 340px; overflow: auto; }
+.logs div { padding: 2px 0; border-bottom: 1px dashed var(--border); }
+.lvl-error { color: var(--neg); } .lvl-warn { color: var(--warn); } .lvl-strategy { color: var(--accent); }
+.banner { padding: 10px 12px; border-radius: 8px; margin-bottom: 16px; border: 1px solid var(--neg); color: var(--neg);
+  background: color-mix(in srgb, var(--neg) 8%, transparent); display: none; white-space: pre-wrap; font-size: 13px; }
+.banner.show { display: block; }
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px 16px; margin-top: 10px; }
+.metrics div { display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 4px 0; font-size: 13px; }
+dialog { border: 1px solid var(--border); border-radius: 12px; background: var(--panel); color: var(--text); padding: 0;
+  width: min(900px, 95vw); }
+dialog::backdrop { background: rgba(0,0,0,.45); }
+dialog .body { padding: 16px; }
+dialog textarea { height: 55vh; }
+.toast { position: fixed; bottom: 18px; right: 18px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  padding: 10px 14px; max-width: 420px; box-shadow: 0 6px 24px rgba(0,0,0,.18); display: none; white-space: pre-wrap; font-size: 13px; z-index: 20; }
+.toast.show { display: block; } .toast.err { border-color: var(--neg); }
+.hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Algo Engine</h1>
+  <span class="pill" id="statePill"><span class="dot"></span><span id="stateText">idle</span></span>
+  <span class="pill" id="brokerPill"><span class="dot"></span><span id="brokerText">no broker</span></span>
+  <span class="spacer"></span>
+  <button id="stopBtn" disabled>Stop</button>
+  <button class="danger" id="killBtn" disabled title="Cancel all orders and flatten positions">Kill switch</button>
+</header>
+
+<main>
+  <section>
+    <div class="card">
+      <h2>Strategies
+        <span class="row" style="flex:0;gap:6px">
+          <button class="small" id="newPy">+ Python</button>
+          <button class="small" id="newCpp">+ C++</button>
+        </span>
+      </h2>
+      <div class="drop" id="drop">Drop a <b>.py</b>, <b>.cpp</b> or <b>.so</b> strategy here<br><span class="hint">or click to choose a file</span></div>
+      <input type="file" id="fileInput" accept=".py,.cpp,.cc,.cxx,.so,.dylib,.dll" hidden>
+      <div class="list" id="strategyList"></div>
+    </div>
+
+    <div class="card">
+      <h2>Run</h2>
+      <label>Strategy</label>
+      <select id="runStrategy"></select>
+      <label>Mode</label>
+      <div class="seg" id="modeSeg">
+        <button data-mode="backtest" class="on">Backtest</button>
+        <button data-mode="paper">Paper</button>
+        <button data-mode="live">Live</button>
+      </div>
+      <div class="hint" id="modeHint"></div>
+      <label>Symbols (comma separated)</label>
+      <input id="symbols" placeholder="AAPL, MSFT" autocomplete="off">
+      <div class="chips" id="datasetChips"></div>
+      <div class="row">
+        <div>
+          <label>Bar size</label>
+          <select id="barSeconds">
+            <option value="5">5 sec</option><option value="15">15 sec</option><option value="30">30 sec</option>
+            <option value="60">1 min</option><option value="300">5 min</option><option value="900">15 min</option>
+            <option value="1800">30 min</option><option value="3600">1 hour</option><option value="86400" selected>1 day</option>
+          </select>
+        </div>
+        <div>
+          <label>Starting cash</label>
+          <input id="cash" type="number" min="0" step="1000" placeholder="config default">
+        </div>
+      </div>
+      <label>Parameters (JSON)</label>
+      <textarea id="params" rows="4" spellcheck="false">{}</textarea>
+      <div class="row" style="margin-top:12px">
+        <button class="primary" id="startBtn">Start</button>
+      </div>
+      <div class="progress"><div id="progress"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="banner" id="banner"></div>
+    <div class="kpis">
+      <div class="kpi"><div class="k">Equity</div><div class="v" id="kEquity">-</div></div>
+      <div class="kpi"><div class="k">Total PnL</div><div class="v" id="kPnl">-</div></div>
+      <div class="kpi"><div class="k">Daily PnL</div><div class="v" id="kDaily">-</div></div>
+      <div class="kpi"><div class="k">Gross exposure</div><div class="v" id="kGross">-</div></div>
+      <div class="kpi"><div class="k">Cash</div><div class="v" id="kCash">-</div></div>
+    </div>
+
+    <div class="card">
+      <h2><span id="chartTitle">Equity</span><span class="muted" id="runLabel" style="text-transform:none;letter-spacing:0;font-weight:400"></span></h2>
+      <canvas id="chart"></canvas>
+      <div class="metrics" id="metrics"></div>
+    </div>
+
+    <div class="card">
+      <div class="tabs" id="tabs">
+        <button data-tab="positions" class="on">Positions</button>
+        <button data-tab="orders">Orders</button>
+        <button data-tab="fills">Fills</button>
+        <button data-tab="logs">Logs</button>
+      </div>
+      <div id="tab-positions" class="tablewrap"></div>
+      <div id="tab-orders" class="tablewrap" hidden></div>
+      <div id="tab-fills" class="tablewrap" hidden></div>
+      <div id="tab-logs" class="logs" hidden></div>
+    </div>
+  </section>
+</main>
+
+<dialog id="editor">
+  <div class="body">
+    <div class="row" style="margin-bottom:10px">
+      <input id="edName" placeholder="my_strategy.py" style="flex:2">
+      <button id="edCancel">Close</button>
+      <button class="primary" id="edSave">Save &amp; validate</button>
+    </div>
+    <textarea id="edCode" spellcheck="false"></textarea>
+    <div class="hint">Strategies run inside the engine with access to your IBKR session. Only run code you trust.</div>
+  </div>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const H = { 'X-Algo-Client': 'dashboard' };
+  let mode = 'backtest', allowLive = false, lastStatus = null, datasets = [];
+
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const money = (v) => v == null || isNaN(v) ? '-' : Number(v).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  const num = (v, d = 2) => v == null || isNaN(v) ? '-' : Number(v).toLocaleString(undefined, {maximumFractionDigits: d});
+  const pct = (v) => v == null || isNaN(v) ? '-' : (v * 100).toFixed(2) + '%';
+  const signed = (el, v) => { el.textContent = money(v); el.className = 'v ' + (v > 0 ? 'pos' : v < 0 ? 'neg' : ''); };
+  const time = (t) => {
+    if (!t) return '-';
+    const d = new Date(t * 1000);
+    const day = d.toISOString().slice(0, 10);
+    return (t % 86400 === 0) ? day : day + ' ' + d.toISOString().slice(11, 19);
+  };
+
+  function toast(msg, err = false) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (err ? ' err' : '');
+    clearTimeout(t._h);
+    t._h = setTimeout(() => t.className = 'toast', err ? 9000 : 3500);
+  }
+
+  async function api(path, opts = {}) {
+    const r = await fetch(path, { ...opts, headers: { ...H, ...(opts.headers || {}) } });
+    const ct = r.headers.get('content-type') || '';
+    const body = ct.includes('json') ? await r.json() : await r.text();
+    if (!r.ok) throw new Error(body && body.error ? body.error : (typeof body === 'string' ? body : r.statusText));
+    return body;
+  }
+
+  // ---------------------------------------------------------- strategies
+  async function loadStrategies(select) {
+    const list = await api('/api/strategies');
+    const box = $('strategyList');
+    box.innerHTML = list.length ? '' : '<div class="hint">No strategies yet. Drop a file above or start from a template.</div>';
+    const sel = $('runStrategy');
+    const prev = select || sel.value;
+    sel.innerHTML = list.map(s => `<option value="${esc(s.name)}">${esc(s.name)}</option>`).join('');
+    if (list.some(s => s.name === prev)) sel.value = prev;
+    for (const s of list) {
+      const el = document.createElement('div');
+      el.className = 'item';
+      el.innerHTML = `<span class="badge">${esc(s.kind === 'shared-library' ? 'lib' : s.kind)}</span>
+        <span class="name" title="${esc(s.name)}">${esc(s.name)}</span>
+        ${s.kind !== 'shared-library' ? '<button class="small" data-a="edit">Edit</button>' : ''}
+        <button class="small" data-a="check">Check</button>
+        <button class="small" data-a="del" title="Delete">&#x2715;</button>`;
+      el.querySelector('[data-a=check]').onclick = () => validate(s.name);
+      el.querySelector('[data-a=del]').onclick = () => remove(s.name);
+      const ed = el.querySelector('[data-a=edit]');
+      if (ed) ed.onclick = () => openEditor(s.name);
+      box.appendChild(el);
+    }
+  }
+
+  async function upload(name, content) {
+    const res = await api('/api/strategies', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, content }) });
+    await loadStrategies(name);
+    if (res.valid) toast(`${name} saved and loaded successfully`);
+    else toast(`${name} saved, but it does not load:\n${res.error}`, true);
+    return res;
+  }
+
+  async function uploadFile(file) {
+    const fd = new FormData();
+    fd.append('file', file, file.name);
+    try {
+      const res = await api('/api/strategies', { method: 'POST', body: fd });
+      await loadStrategies(file.name);
+      if (res.valid) toast(`${file.name} uploaded and validated`);
+      else toast(`${file.name} uploaded, but it does not load:\n${res.error}`, true);
+    } catch (e) { toast(e.message, true); }
+  }
+
+  async function validate(name) {
+    toast(`checking ${name}...`);
+    try {
+      const r = await api(`/api/strategies/${encodeURIComponent(name)}/validate`, { method: 'POST' });
+      r.valid ? toast(`${name} is valid`) : toast(`${name}:\n${r.error}`, true);
+    } catch (e) { toast(e.message, true); }
+  }
+
+  async function remove(name) {
+    if (!confirm(`Delete ${name}?`)) return;
+    try { await api(`/api/strategies/${encodeURIComponent(name)}`, { method: 'DELETE' }); await loadStrategies(); }
+    catch (e) { toast(e.message, true); }
+  }
+
+  async function openEditor(name, template) {
+    $('edName').value = name || '';
+    $('edCode').value = template != null ? template : await api(`/api/strategies/${encodeURIComponent(name)}`);
+    $('editor').showModal();
+  }
+
+  $('newPy').onclick = async () => openEditor('my_strategy.py', await api('/api/template?lang=py'));
+  $('newCpp').onclick = async () => openEditor('my_strategy.cpp', await api('/api/template?lang=cpp'));
+  $('edCancel').onclick = () => $('editor').close();
+  $('edSave').onclick = async () => {
+    try {
+      const r = await upload($('edName').value.trim(), $('edCode').value);
+      if (r.valid) $('editor').close();
+    } catch (e) { toast(e.message, true); }
+  };
+  $('edCode').addEventListener('keydown', (e) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const t = e.target, s = t.selectionStart;
+      t.setRangeText('    ', s, t.selectionEnd, 'end');
+    }
+  });
+
+  const drop = $('drop');
+  drop.onclick = () => $('fileInput').click();
+  $('fileInput').onchange = (e) => { if (e.target.files[0]) uploadFile(e.target.files[0]); e.target.value = ''; };
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', (e) => { const f = e.dataTransfer.files[0]; if (f) uploadFile(f); });
+
+  // ---------------------------------------------------------- run panel
+  function setMode(m) {
+    mode = m;
+    document.querySelectorAll('#modeSeg button').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
+    const hints = {
+      backtest: `Bars from data/SYMBOL.csv. Orders fill at the next bar's open.`,
+      paper: 'Connects to TWS / IB Gateway. Refuses to run unless the account is a paper account (DU...).',
+      live: allowLive ? 'REAL MONEY. Orders go to your live IBKR account.' : 'Disabled. Set "allow_live": true in config.json to enable.'
+    };
+    $('modeHint').textContent = hints[m];
+    $('modeHint').className = 'hint' + (m === 'live' ? ' lvl-error' : '');
+    $('datasetChips').style.display = m === 'backtest' ? '' : 'none';
+    if (m !== 'backtest' && $('barSeconds').value === '86400') $('barSeconds').value = '60';
+    if (m === 'backtest' && !lastStatus?.running) $('barSeconds').value = $('barSeconds').value || '86400';
+  }
+  document.querySelectorAll('#modeSeg button').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+
+  function selectedSymbols() {
+    return $('symbols').value.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+  }
+  function renderChips() {
+    const sel = new Set(selectedSymbols());
+    $('datasetChips').innerHTML = datasets.length
+      ? datasets.map(s => `<span class="chip ${sel.has(s) ? 'on' : ''}" data-s="${esc(s)}">${esc(s)}</span>`).join('')
+      : '<span class="hint">No CSV files in the data folder yet.</span>';
+    $('datasetChips').querySelectorAll('.chip').forEach(c => c.onclick = () => {
+      const cur = selectedSymbols();
+      const s = c.dataset.s;
+      $('symbols').value = (cur.includes(s) ? cur.filter(x => x !== s) : [...cur, s]).join(', ');
+      renderChips();
+    });
+  }
+  $('symbols').addEventListener('input', renderChips);
+
+  $('startBtn').onclick = async () => {
+    let params;
+    try { params = JSON.parse($('params').value || '{}'); }
+    catch (e) { return toast('Parameters must be valid JSON, e.g. {"fast": 10, "slow": 40}', true); }
+    if (mode === 'live' && !confirm('Start LIVE trading with real money?')) return;
+    const body = { strategy: $('runStrategy').value, mode, symbols: selectedSymbols(),
+      bar_seconds: Number($('barSeconds').value), params };
+    if ($('cash').value) body.starting_cash = Number($('cash').value);
+    try { await api('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); poll(); }
+    catch (e) { toast(e.message, true); }
+  };
+  $('stopBtn').onclick = () => api('/api/stop', { method: 'POST' }).then(poll).catch(e => toast(e.message, true));
+  $('killBtn').onclick = async () => {
+    if (!confirm('Trip the kill switch? Open orders are cancelled and positions flattened.')) return;
+    try { await api('/api/kill', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); poll(); }
+    catch (e) { toast(e.message, true); }
+  };
+
+  // ---------------------------------------------------------- tabs
+  document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => {
+    document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x === b));
+    ['positions', 'orders', 'fills', 'logs'].forEach(t => $('tab-' + t).hidden = t !== b.dataset.tab);
+  });
+
+  function table(cols, rows, empty) {
+    if (!rows.length) return `<div class="hint" style="padding:8px">${empty}</div>`;
+    return `<table><thead><tr>${cols.map(c => `<th class="${c.n ? 'n' : ''}">${c.h}</th>`).join('')}</tr></thead><tbody>` +
+      rows.map(r => `<tr>${cols.map(c => `<td class="${c.n ? 'n' : ''} ${c.cls ? c.cls(r) : ''}">${c.f(r)}</td>`).join('')}</tr>`).join('') +
+      '</tbody></table>';
+  }
+  const pnlCls = (v) => v > 0 ? 'pos' : v < 0 ? 'neg' : '';
+
+  // ---------------------------------------------------------- chart
+  function drawChart(curve) {
+    const c = $('chart'), dpr = window.devicePixelRatio || 1;
+    const w = c.clientWidth, h = c.clientHeight;
+    c.width = w * dpr; c.height = h * dpr;
+    const g = c.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, h);
+    const css = getComputedStyle(document.documentElement);
+    const muted = css.getPropertyValue('--muted').trim(), border = css.getPropertyValue('--border').trim();
+    g.font = '11px ' + css.getPropertyValue('--sans');
+    if (!curve || curve.length < 2) {
+      g.fillStyle = muted; g.textAlign = 'center';
+      g.fillText('Equity curve appears here once a run starts', w / 2, h / 2);
+      return;
+    }
+    const pad = { l: 64, r: 12, t: 10, b: 24 };
+    const xs = curve.map(p => p[0]), ys = curve.map(p => p[1]);
+    let y0 = Math.min(...ys), y1 = Math.max(...ys);
+    if (y1 - y0 < 1e-9) { y0 -= 1; y1 += 1; }
+    const m = (y1 - y0) * 0.08; y0 -= m; y1 += m;
+    const x0 = xs[0], x1 = xs[xs.length - 1];
+    const X = (i) => pad.l + (i / (curve.length - 1)) * (w - pad.l - pad.r);  // index axis: no gaps for nights/weekends
+    const Y = (v) => pad.t + (1 - (v - y0) / (y1 - y0)) * (h - pad.t - pad.b);
+    g.strokeStyle = border; g.fillStyle = muted; g.lineWidth = 1; g.textAlign = 'right';
+    for (let k = 0; k <= 4; k++) {
+      const v = y0 + (y1 - y0) * k / 4, y = Y(v);
+      g.beginPath(); g.moveTo(pad.l, y); g.lineTo(w - pad.r, y); g.stroke();
+      g.fillText(num(v, 0), pad.l - 8, y + 4);
+    }
+    g.textAlign = 'left'; g.fillText(time(x0), pad.l, h - 6);
+    g.textAlign = 'right'; g.fillText(time(x1), w - pad.r, h - 6);
+    const start = ys[0];
+    if (start >= y0 && start <= y1) {
+      g.setLineDash([4, 4]); g.beginPath(); g.moveTo(pad.l, Y(start)); g.lineTo(w - pad.r, Y(start)); g.stroke(); g.setLineDash([]);
+    }
+    g.beginPath();
+    ys.forEach((v, i) => i ? g.lineTo(X(i), Y(v)) : g.moveTo(X(i), Y(v)));
+    g.strokeStyle = css.getPropertyValue('--chart').trim(); g.lineWidth = 1.8; g.stroke();
+    g.lineTo(X(ys.length - 1), h - pad.b); g.lineTo(X(0), h - pad.b); g.closePath();
+    g.fillStyle = css.getPropertyValue('--chart-fill').trim(); g.fill();
+  }
+  window.addEventListener('resize', () => drawChart(lastStatus?.engine?.equity_curve));
+
+  // ---------------------------------------------------------- status
+  function render(st) {
+    lastStatus = st;
+    allowLive = !!st.allow_live;
+    document.querySelector('#modeSeg [data-mode=live]').disabled = !allowLive;
+    const running = st.running, e = st.engine;
+    const pill = $('statePill');
+    pill.className = 'pill ' + (st.state === 'error' ? 'bad' : running ? 'busy' : st.state === 'finished' ? 'ok' : '');
+    $('stateText').textContent = running ? `${st.run?.mode || ''} running` : st.state;
+    const bp = $('brokerPill');
+    if (e) {
+      bp.className = 'pill ' + (e.connected ? 'ok' : 'bad');
+      $('brokerText').textContent = `${e.broker} ${e.connected ? 'connected' : 'disconnected'}`;
+    }
+    $('stopBtn').disabled = !running;
+    $('killBtn').disabled = !running || st.run?.mode === 'backtest';
+    $('startBtn').disabled = running;
+    $('progress').style.width = (st.run?.mode === 'backtest' ? (st.progress * 100) : (running ? 100 : 0)) + '%';
+
+    const msgs = [];
+    if (st.error) msgs.push(st.error);
+    if (e?.halted) msgs.push('Kill switch active: ' + e.halt_reason);
+    $('banner').textContent = msgs.join('\n');
+    $('banner').className = 'banner' + (msgs.length ? ' show' : '');
+
+    if (st.run) $('runLabel').textContent = `${st.run.strategy} · ${st.run.mode} · ${st.run.symbols.join(', ')}`;
+    if (!e) return;
+    $('kEquity').textContent = money(e.equity);
+    signed($('kPnl'), e.equity - e.starting_cash);
+    signed($('kDaily'), e.daily_pnl);
+    $('kGross').textContent = money(e.gross_exposure);
+    $('kCash').textContent = money(e.cash);
+    drawChart(e.equity_curve);
+
+    const m = st.metrics;
+    $('metrics').innerHTML = m ? [
+      ['Total return', pct(m.total_return)], ['Annual return', pct(m.annualized_return)], ['Annual vol', pct(m.annualized_vol)],
+      ['Sharpe', num(m.sharpe)], ['Max drawdown', pct(m.max_drawdown)], ['Trades', m.closed_trades],
+      ['Win rate', pct(m.win_rate)], ['Commissions', money(m.total_commission)]
+    ].map(([k, v]) => `<div><span class="muted">${k}</span><b>${v}</b></div>`).join('') : '';
+
+    $('tab-positions').innerHTML = table([
+      { h: 'Symbol', f: r => esc(r.symbol) }, { h: 'Qty', n: 1, f: r => num(r.quantity, 4) },
+      { h: 'Avg', n: 1, f: r => money(r.avg_price) }, { h: 'Last', n: 1, f: r => money(r.last_price) },
+      { h: 'Value', n: 1, f: r => money(r.market_value) },
+      { h: 'Unrealized', n: 1, f: r => money(r.unrealized_pnl), cls: r => pnlCls(r.unrealized_pnl) },
+      { h: 'Realized', n: 1, f: r => money(r.realized_pnl), cls: r => pnlCls(r.realized_pnl) }
+    ], e.positions, 'No positions');
+    $('tab-orders').innerHTML = table([
+      { h: '#', f: r => r.id }, { h: 'Time', f: r => time(r.time) }, { h: 'Symbol', f: r => esc(r.symbol) },
+      { h: 'Side', f: r => r.side }, { h: 'Type', f: r => r.type }, { h: 'Qty', n: 1, f: r => num(r.quantity, 4) },
+      { h: 'Limit', n: 1, f: r => r.type === 'LMT' ? money(r.limit_price) : '' },
+      { h: 'Status', f: r => esc(r.status), cls: r => r.status === 'Rejected' ? 'neg' : '' },
+      { h: 'Fill', n: 1, f: r => r.filled ? money(r.avg_fill_price) : '' }, { h: 'Note', f: r => esc(r.reason) }
+    ], e.orders, 'No orders');
+    $('tab-fills').innerHTML = table([
+      { h: 'Time', f: r => time(r.time) }, { h: 'Symbol', f: r => esc(r.symbol) }, { h: 'Side', f: r => r.side },
+      { h: 'Qty', n: 1, f: r => num(r.quantity, 4) }, { h: 'Price', n: 1, f: r => money(r.price) },
+      { h: 'Commission', n: 1, f: r => money(r.commission) }
+    ], e.fills, 'No fills');
+    $('tab-logs').innerHTML = e.logs.length ? e.logs.map(l =>
+      `<div class="lvl-${esc(l.level)}"><span class="muted">${time(l.time)}</span> [${esc(l.level)}] ${esc(l.message)}</div>`).join('')
+      : '<div class="hint">No logs</div>';
+  }
+
+  let timer = null;
+  async function poll() {
+    clearTimeout(timer);
+    try {
+      const st = await api('/api/status');
+      render(st);
+      timer = setTimeout(poll, st.running ? (st.run?.mode === 'backtest' ? 400 : 1000) : 3000);
+    } catch (e) {
+      $('statePill').className = 'pill bad';
+      $('stateText').textContent = 'engine offline';
+      timer = setTimeout(poll, 3000);
+    }
+  }
+
+  async function init() {
+    try {
+      const [health, ds] = await Promise.all([api('/api/health'), api('/api/datasets')]);
+      datasets = ds.symbols || [];
+      if (!health.ibkr) {
+        ['paper', 'live'].forEach(m => {
+          const b = document.querySelector(`#modeSeg [data-mode=${m}]`);
+          b.title = 'This build has no IBKR adapter (see docs/ibkr-setup.md)';
+        });
+      }
+      if (!$('symbols').value && datasets.length) $('symbols').value = datasets.slice(0, 3).join(', ');
+    } catch (e) { /* offline: poll() reports it */ }
+    renderChips();
+    setMode('backtest');
+    await loadStrategies().catch(e => toast(e.message, true));
+    poll();
+  }
+  init();
+})();
+</script>
+</body>
+</html>
